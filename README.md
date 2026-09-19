@@ -1,128 +1,80 @@
-# Alcohol Label Verification — Static Version (GitHub Pages)
+# Trailmarks
 
-A fully **client-side** version of the Alcohol Label Verification prototype.
-Runs continuously for free on **GitHub Pages** — no server, no backend, no
-hosting costs, no uptime limits.
+A small practice-test platform for Sewa, built from the 5th grade Math, Science,
+and Social Studies Year-at-a-Glance plans. Same shape as the Class Companion
+assignments Sewa already uses — short-answer questions, multiple attempts,
+per-question scoring and feedback — but self-hosted and content you control.
 
-## How it's different from the FastAPI version
+No build step, no backend. It's four files: `index.html`, `styles.css`,
+`app.js`, and `questions.js` (the question bank). Progress is saved to the
+browser's local storage under the key `trailmarks_state_v1`, so it lives on
+whatever device/browser Sewa answers on.
 
-| | FastAPI version | Static version (this one) |
-|---|---|---|
-| OCR | Tesseract (Python, server-side) | **Tesseract.js** (runs in the browser via WebAssembly) |
-| Matching logic | Python (`main.py`) | Same logic, ported to JavaScript (inline in `index.html`) |
-| Hosting | Requires a running server (Render/Railway/Docker) | **Static files only** — GitHub Pages, Netlify, Vercel, S3, anywhere |
-| Data | Sent to a backend for processing | **Never leaves the browser** |
-| Continuous uptime | Depends on free-tier server staying awake | Always on — GitHub Pages has no sleep/spin-down |
+## Run it locally
 
-This is a single self-contained `index.html` file. There is no `main.py`, no
-`requirements.txt`, no Dockerfile, and nothing to install to run it.
+Just open `index.html` in a browser — everything is static.
 
-## File structure
+## Launch it on GitHub Pages
 
-```
-.
-├── index.html              ← the entire app (HTML + CSS + JS, OCR via Tesseract.js CDN)
-├── test_label_pass.png     ← sample label (all fields match)
-├── test_label_fail.png     ← sample label (3 intentional mismatches)
-├── .github/
-│   └── workflows/
-│       └── deploy.yml      ← GitHub Actions workflow that publishes to GitHub Pages
-└── README.md
-```
+1. Create a new GitHub repo (e.g. `trailmarks`) and push these four files
+   (plus this README) to the root of the `main` branch.
 
-## Deploy to GitHub Pages (continuous, free)
+   ```bash
+   git init
+   git add .
+   git commit -m "Trailmarks v1"
+   git branch -M main
+   git remote add origin https://github.com/<your-username>/trailmarks.git
+   git push -u origin main
+   ```
 
-1. Create a new GitHub repo (or use an existing one) and push these files to
-   the `main` branch:
+2. In the repo on GitHub: **Settings → Pages → Build and deployment → Source**,
+   choose **Deploy from a branch**, branch `main`, folder `/ (root)`. Save.
 
-```bash
-git init
-git add .
-git commit -m "Static label verification app"
-git branch -M main
-git remote add origin <your-repo-url>
-git push -u origin main
-```
+3. GitHub gives you a URL like
+   `https://<your-username>.github.io/trailmarks/` within a minute or two.
+   That's the link Sewa opens to take the practice sets.
 
-2. In your repo, go to **Settings → Pages**.
-3. Under **Build and deployment → Source**, select **GitHub Actions**.
-4. Push to `main` (or it'll run automatically on the first push) — the
-   included workflow (`.github/workflows/deploy.yml`) builds and deploys
-   automatically.
-5. After the workflow finishes (check the **Actions** tab), your app is live
-   at:
+## Adding or editing questions
 
-```
-https://<your-username>.github.io/<your-repo-name>/
-```
+Everything content-related lives in `questions.js`. Each subject has a list
+of units, and each unit has a list of questions:
 
-It will redeploy automatically every time you push to `main` — no manual
-steps needed, and no server to keep running.
-
-## Run it locally first (optional)
-
-Because it's just static files, you don't need Python or any install step.
-Any static file server works:
-
-```bash
-# Option 1: Python's built-in server
-python3 -m http.server 8000
-
-# Option 2: Node's http-server
-npx http-server -p 8000
+```js
+{
+  id: "m1q4",                 // unique — keep the subject/unit prefix
+  prompt: "…the question text…",
+  rubric: [
+    {
+      criteria: "…what earns the points…",
+      points: 3,
+      keywords: ["keyword1", "keyword2"],   // any one match = credit
+      hint: "…shown if the criterion is missed, to guide a resubmit…"
+    }
+  ]
+}
 ```
 
-Then open `http://localhost:8000`.
+Scoring adds up rubric points where at least one keyword appears in the
+answer (case-insensitive). It's a rough auto-grader meant for quick, private
+practice — not a stand-in for a teacher's read of the work. `MAX_ATTEMPTS`
+in `app.js` (currently 3) controls how many tries each question allows.
 
-You can even just double-click `index.html` to open it directly in a
-browser — it works without any server at all (Tesseract.js loads from a CDN).
+## What's loaded so far
 
-## How to use
+- **Math** — Unit 1 (Place Value) and Unit 2 (Add/Subtract Whole Numbers &
+  Decimals), from the 2026–27 Math YAG.
+- **Science** — Unit 1 (Forces and Motion) and Unit 3 (Matter and Its
+  Properties), from the 5th Grade Science YAG.
+- **Social Studies** — Unit 1 (Exploration and Colonization) and Unit 2
+  (American Revolution), from the 5th Grade U.S. History YAG.
 
-Same as the FastAPI version's UI:
+Each subject's remaining units from the YAG docs can be added the same way —
+just extend the `units` array for that subject in `questions.js`.
 
-- **Single Label tab**: upload one label image, enter expected Brand Name,
-  Class/Type, Alcohol Content, and Net Contents, click **Verify Label**.
-- **Batch tab**: select multiple label images + paste a JSON array of
-  expected applications (matched by filename), click **Verify Batch**.
+## Possible next steps
 
-Test with `test_label_pass.png` and `test_label_fail.png` using the same
-sample values described in the main project README.
-
-## How it works
-
-- **OCR**: [Tesseract.js](https://github.com/naptha/tesseract.js) loads a
-  WebAssembly build of Tesseract OCR directly in the browser from a CDN
-  (`cdn.jsdelivr.net`). The first scan downloads the OCR engine and language
-  data (~a few MB), so it's slower on first use; subsequent scans are faster
-  because the browser caches it.
-- **Matching logic**: the same rules as the Python backend — fuzzy matching
-  for brand name/class-type (handles case differences like
-  `"STONE'S THROW"` vs `"Stone's Throw"`), numeric tolerance matching for ABV,
-  unit-aware matching for net contents, and a strict check that the
-  `"GOVERNMENT WARNING:"` header is present in ALL CAPS with the required
-  wording.
-- **No backend**: everything — image upload, OCR, and field comparison —
-  happens in the user's browser. Nothing is uploaded or transmitted anywhere.
-
-## Limitations of the static version
-
-- **First-run delay**: loading the Tesseract.js engine and English language
-  data takes a few seconds on the first scan (cached afterward).
-- **Client device performance**: OCR speed depends on the user's device —
-  older/low-power devices will be slower than a server doing the same work.
-- **CDN dependency**: requires `cdn.jsdelivr.net` to be reachable to load
-  Tesseract.js. If this needs to work fully offline or behind a firewall that
-  blocks CDNs, the Tesseract.js library and `eng.traineddata` file would need
-  to be bundled locally instead of loaded from the CDN.
-- **No batch concurrency**: batch mode processes images one at a time
-  (sequential), since Tesseract.js OCR is CPU-intensive in the browser.
-
-## Relationship to the FastAPI prototype
-
-This static version is a **parallel implementation** of the same matching
-logic described in the main project's `README.md`, intended for free,
-always-on hosting via GitHub Pages where a Python backend isn't an option.
-The FastAPI version remains useful for scenarios requiring server-side
-processing, integration with internal systems, or deployment behind a
-firewall where CDN access is restricted.
+- Swap local storage for a small cloud sync (e.g. JSONBin.io) if you want
+  Sewa's progress to follow across devices.
+- Add a scheduled email digest of scores (e.g. via Zapier/Make.com) if you
+  want a weekly summary without checking the site yourself.
